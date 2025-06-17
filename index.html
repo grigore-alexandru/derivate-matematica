@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Reprezentarea Grafică a Funcțiilor — Modern</title>
+
+  <!-- Google Fonts: Poppins -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet" />
+
+  <!-- Biblioteci externe -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+  <script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+  <!-- Design System & Stiluri -->
+  <style>
+    :root {
+      --clr-primary: #6366f1;
+      --clr-primary-dark: #4f46e5;
+      --clr-bg: #f5f7ff;
+      --clr-white: #ffffff;
+      --clr-grey-50: #fafafa;
+      --clr-grey-100: #f2f2f2;
+      --clr-grey-300: #e0e0e0;
+      --ff-primary: 'Poppins', sans-serif;
+      --radius: 8px;
+      --shadow-s: 0 1px 4px rgba(0, 0, 0, 0.08);
+      --shadow-m: 0 2px 12px rgba(0, 0, 0, 0.1);
+      --transition-fast: 0.25s ease-out;
+      --transition: 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--ff-primary); background: var(--clr-bg); color: #333; line-height: 1.6; }
+    img { max-width: 100%; display: block; }
+
+    /* Navigație */
+    header {
+      background: var(--clr-primary);
+      color: var(--clr-white);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: var(--shadow-s);
+      overflow: hidden; /* necesar pentru progress bar */
+    }
+    .nav-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap; /* Optim pentru ecrane mici */
+      gap: 0.5rem;
+    }
+    .logo {
+      font-size: 1.75rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    nav ul {
+      display: flex;
+      align-items: center; /* aliniere verticală perfectă */
+      gap: 1.5rem;
+      flex-wrap: wrap;
+      list-style: none;
+    }
+    nav a {
+      color: var(--clr-white);
+      text-decoration: none;
+      font-weight: 500;
+      padding: 0.25rem 0.125rem;
+      position: relative;
+      transition: color var(--transition-fast);
+    }
+    nav a::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      bottom: -4px;
+      width: 0%;
+      height: 2px;
+      background: var(--clr-white);
+      transition: width var(--transition-fast);
+    }
+    nav a:hover,
+    nav a.active {
+      color: var(--clr-grey-50);
+    }
+    nav a:hover::after,
+    nav a.active::after {
+      width: 100%;
+    }
+
+    /* Bara de progres scroll (sub header) */
+    #progressBar {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      height: 4px;
+      background: var(--clr-grey-50);
+      width: 0%;
+      transition: width var(--transition-fast);
+    }
+
+    /* Layout principal */
+    .container {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+    }
+    section {
+      margin-bottom: 3rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity var(--transition), transform var(--transition);
+    }
+    section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    h2 {
+      font-size: 1.875rem;
+      margin-bottom: 1rem;
+      color: var(--clr-primary);
+    }
+    h3 {
+      font-size: 1.3125rem;
+      margin-bottom: 0.75rem;
+      color: #444;
+    }
+    p,
+    ul,
+    ol {
+      margin-bottom: 1rem;
+    }
+    ul {
+      list-style: inside disc;
+      margin-left: 1rem;
+    }
+
+    /* Tabel generic */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      background: var(--clr-white);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-s);
+    }
+    th,
+    td {
+      padding: 0.75rem 1rem;
+      text-align: center;
+    }
+    th {
+      background: var(--clr-grey-100);
+      font-weight: 600;
+    }
+
+    /* Scroll to Top */
+    #toTop {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--clr-primary);
+      color: var(--clr-white);
+      border: none;
+      padding: 0.75rem;
+      border-radius: 50%;
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity var(--transition-fast), visibility var(--transition-fast), transform var(--transition-fast);
+      font-size: 1.25rem;
+      box-shadow: var(--shadow-m);
+      transform: translateY(20px);
+    }
+    #toTop.show {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    /* =================== Etapa III – Widget Analiză =================== */
+    .analysis-widget {
+      background: var(--clr-white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-m);
+      padding: 1.5rem;
+    }
+    .analysis-widget .input-group {
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+    .analysis-widget label {
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    .analysis-widget input {
+      padding: 0.75rem;
+      border: 1px solid var(--clr-grey-300);
+      border-radius: var(--radius);
+      font-size: 1rem;
+    }
+    .analysis-widget .interval-inputs {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .analysis-widget button {
+      align-self: flex-start;
+      padding: 0.75rem 1.5rem;
+      background: var(--clr-primary);
+      color: var(--clr-white);
+      border: none;
+      border-radius: var(--radius);
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition-fast), transform var(--transition-fast);
+      margin-right: 1rem;
+    }
+    .analysis-widget button:hover {
+      background: var(--clr-primary-dark);
+      transform: translateY(-2px);
+    }
+    .guide-btn {
+      background: var(--clr-grey-100);
+      color: var(--clr-primary);
+    }
+    .guide-btn:hover {
+      background: var(--clr-grey-300);
+    }
+
+    /* tabel semne cu colorare deriv */
+    .row-f1 td { color: #d62728; }
+    .row-f2 td { color: #2ca02c; }
+
+    /* Calculatoare Desmos */
+    #calculators {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+    .calc-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .calc-container h4 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: #444;
+      text-align: center;
+    }
+    #calculator-left,
+    #calculator-right {
+      width: 100%;
+      height: 450px;
+      border: none;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-s);
+    }
+    @media (min-width: 800px) {
+      #calculators { flex-direction: row; }
+    }
+
+    /* Ghid de utilizare - modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0; /* acoperă întreg ecranul */
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: flex-start; /* începe sus pentru a permite sticky */
+      justify-content: center;
+      padding: 5vh 1rem;
+      z-index: 2000;
+      animation: fadeOut var(--transition-fast) forwards;
+    }
+    .modal-overlay.show {
+      display: flex;
+      animation: fadeIn var(--transition-fast) forwards;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+
+    .modal-content {
+      position: fixed; /* rămâne vizibilă la scroll în interiorul overlay */
+      top: 5vh;
+      background: var(--clr-white);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-m);
+      transform: translateY(-20px);
+      animation: slideDown var(--transition) forwards;
+    }
+    @keyframes slideDown { to { transform: translateY(0); } }
+
+    .modal-content h3 { margin-top: 0; color: var(--clr-primary); font-size: 1.375rem; }
+    .modal-content ul { list-style: inside circle; margin-left: 1rem; }
+    .close-btn {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+      transition: transform var(--transition-fast);
+    }
+    .close-btn:hover { transform: rotate(90deg); }
+
+    /* Explicații vizuale */
+    .explanations {
+      background: var(--clr-grey-100);
+      padding: 1rem;
+      border-radius: var(--radius);
+      margin-top: 2rem;
+    }
+    .explanations h4 { font-size: 1.125rem; font-weight: 600; color: #444; margin-bottom: 0.5rem; }
+    .explanations ul { list-style: inside disc; margin-left: 1rem; }
+
+    /* Responsivitate suplimentară pentru tabele și code */
+    pre, code {
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    @media (max-width: 600px) {
+      th, td { padding: 0.5rem; }
+      h2 { font-size: 1.5rem; }
+      h3 { font-size: 1.125rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Navigație -->
+  <header>
+    <div class="nav-container">
+      <div class="logo">GraficFuncții</div>
+      <nav>
+        <ul>
+          <li><a href="#intro" class="active">Introducere</a></li>
+          <li><a href="#prelim">Studiu Preliminar</a></li>
+          <li><a href="#derivate">Derivate</a></li>
+          <li><a href="#tabel">Tabel & Analiză</a></li>
+        </ul>
+      </nav>
+    </div>
+    <div id="progressBar"></div>
+  </header>
+
+  <!-- Conținut principal -->
+  <main class="container">
+    <!-- Etapa I -->
+    <section id="intro">
+      <h2>1. Introducere și cadru teoretic</h2>
+      <p>Fie <em>f:D → ℝ</em> o funcție reală de variabilă reală. Mulțimea <strong>G<sub>f</sub></strong> = { (x, f(x)) | x ∈ D } se numește graficul funcției. Curbatura geometrică asociată este notată <strong>C<sub>f</sub></strong>.</p>
+    </section>
+
+    <!-- Etapa II -->
+    <section id="prelim">
+      <h2>2. Etapa I — Studiul preliminar</h2>
+      <h3>2.1 Domeniu de definiție</h3>
+      <ul>
+        <li>Verifică expresiile: numitori, radicande, logaritmi.</li>
+        <li>La funcții periodice, alege un interval de lungime T.</li>
+      </ul>
+      <h3>2.2 Intersecții cu axele</h3>
+      <ul>
+        <li><strong>Ox:</strong> f(x)=0 → (a,0)</li>
+        <li><strong>Oy:</strong> dacă 0 ∈ D → (0, f(0))</li>
+      </ul>
+      <h3>2.3 Asimptote</h3>
+      <ul>
+        <li><strong>Verticale:</strong> x=a dacă lim f(x)=±∞</li>
+        <li><strong>Orizontale:</strong> y=b dacă lim<sub>±∞</sub> f(x)=b</li>
+        <li><strong>Oblice:</strong> y=mx+n cu m=lim f(x)/x, n=lim(f(x)-mx)</li>
+      </ul>
+    </section>
+
+    <!-- Etapa III -->
+    <section id="derivate">
+      <h2>3. Etapa II — Studiul cu derivatele</h2>
+      <h3>3.1 Derivata întâi</h3>
+      <ul>
+        <li>f'(x) şi puncte critice → semn → monotonie.</li>
+        <li>Schimbare +→− maxim local; −→+ minim local.</li>
+      </ul>
+      <h3>3.2 Derivata a doua</h3>
+      <ul>
+        <li>f''(x) → semn → concavitate.</li>
+        <li>Puncte de inflexiune la schimbări de semn.</li>
+      </ul>
+    </section>
+
+    <!-- Etapa IV (noua sectiune inclusă în etapa III) -->
+    <section id="tabel">
+      <h2>4. Etapa III — Tabel de variație și analiză interactivă</h2>
+      <p>În această etapă sintetizăm rezultatele derivatelor într-un <em>tabel de semne</em>, identificăm zerourile, extremumurile și punctele de inflexiune, apoi vizualizăm grafic funcția și derivatele ei. Introdu funcția și intervalul dorit pentru a genera automat analiza.</p>
+
+      <!-- Widget analiză -->
+      <div class="analysis-widget">
+        <div class="input-group">
+          <label for="functie">Funcția (ex.: <code>3x^2 - 4x + 1</code>):</label>
+          <input id="functie" type="text" value="3x^2-4x+1" />
+        </div>
+        <div class="input-group interval-inputs">
+          <div style="flex:1">
+            <label for="x_min">X min:</label>
+            <input id="x_min" type="number" value="-10" />
+          </div>
+          <div style="flex:1">
+            <label for="x_max">X max:</label>
+            <input id="x_max" type="number" value="10" />
+          </div>
+        </div>
+        <button id="analyzeBtn">Afișează analiza</button>
+        <button id="guideBtn" class="guide-btn">Ghid de utilizare</button>
+
+        <!-- Modal ghid de utilizare -->
+        <div id="modalOverlay" class="modal-overlay">
+          <div class="modal-content">
+            <button id="closeModal" class="close-btn">&times;</button>
+            <h3>Ghid de utilizare</h3>
+            <p>Acest instrument permite analiza completă a oricărei funcții de o variabilă, astfel:</p>
+            <ul>
+              <li><strong>Funcția:</strong> Introduceți expresia matematică în format simplu (ex: <code>sin(x)</code>, <code>3x^2-4x+1</code>).</li>
+              <li><strong>Interval [Xmin, Xmax]:</strong> Definește domeniul de analiză pentru găsirea rădăcinilor și afișarea semnelor.</li>
+              <li><strong>Butoane:</strong> "Afișează analiza" procesează datele și afișează punctele caracteristice, tabelul de semne și graficele.</li>
+              <li><strong>Puncte caracteristice:</strong> Listează acele x unde f(x)=0, f′(x)=0 și f″(x)=0.</li>
+              <li><strong>Tabel de semne:</strong> Prezintă semnul fiecărei funcții (originală și derivate) pe subintervale.</li>
+              <li><strong>Grafic Desmos:</strong> Grafică funcția originală (albastru), derivata I (roșu) și derivata II (verde).</li>
+            </ul>
+            <p>Apăsați &times; sau dați clic în afara ferestrei pentru a închide ghidul.</p>
+          </div>
+        </div>
+
+        <!-- Rezultate dinamice -->
+        <div id="puncte"></div>
+        <div id="tabel-semne"></div>
+
+        <!-- Grafice Desmos -->
+        <div id="calculators">
+          <div class="calc-container">
+            <h4>Funcția originală</h4>
+            <div id="calculator-left"></div>
+          </div>
+          <div class="calc-container">
+            <h4>Derivatele ordin I <span style="color:#d62728;">(roșu)</span> & II <span style="color:#2ca02c;">(verde)</span></h4>
+            <div id="calculator-right"></div>
+          </div>
+        </div>
+
+        <!-- Explicații vizuale pentru desen manual -->
+        <div class="explanations">
+          <h4>Pași pentru desenarea manuală:</h4>
+          <ul>
+            <li><strong>1.</strong> Desenați axele și punctele cheie din tabel.</li>
+            <li><strong>2.</strong> Respectați semnele pentru a reda corect monotonia și concavitatea.</li>
+            <li><strong>3.</strong> Aplicați simetrii sau periodicitate pentru a completa graficul.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Btn top -->
+  <button id="toTop" aria-label="Sus">↑</button>
+
+  <!-- Script aplicație -->
+  <script>
+    // Scroll-to-top + progress bar + nav active
+    const toTopBtn = document.getElementById('toTop');
+    const progressBar = document.getElementById('progressBar');
+    const navLinks = document.querySelectorAll('nav a');
+    const sections = document.querySelectorAll('main section');
+
+    function handleScroll() {
+      const scrollY = window.scrollY;
+      // buton top
+      if (scrollY > 400) {
+        toTopBtn.classList.add('show');
+      } else {
+        toTopBtn.classList.remove('show');
+      }
+      // progress bar
+      const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = (scrollY / scrollHeight) * 100;
+      progressBar.style.width = progress + '%';
+      // nav active
+      let idx = sections.length;
+      while (--idx && scrollY + 150 < sections[idx].offsetTop) {}
+      navLinks.forEach(l => l.classList.remove('active'));
+      navLinks[idx].classList.add('active');
+    }
+
+    window.addEventListener('scroll', handleScroll);
+    toTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    handleScroll(); // init
+
+    // Fade-in sections
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.2 }
+    );
+    sections.forEach(sec => observer.observe(sec));
+
+    // Desmos calculatoare
+    const calcL = Desmos.GraphingCalculator(document.getElementById('calculator-left'), { expressions: false, settingsMenu: false, keypad: false });
+    const calcR = Desmos.GraphingCalculator(document.getElementById('calculator-right'), { expressions: false, settingsMenu: false, keypad: false });
+
+    // Elemente analiza
+    const analyzeBtn = document.getElementById('analyzeBtn');
+    const guideBtn = document.getElementById('guideBtn');
+    const modalOverlay = document.getElementById('modalOverlay');
+    const closeModal = document.getElementById('closeModal');
+
+    // Modal ghid
+    guideBtn.addEventListener('click', () => {
+      modalOverlay.classList.add('show');
+      document.body.classList.add('modal-open');
+    });
+    function closeGuide() {
+      modalOverlay.classList.remove('show');
+      document.body.classList.remove('modal-open');
+    }
+    closeModal.addEventListener('click', closeGuide);
+    modalOverlay.addEventListener('click', e => {
+      if (e.target === modalOverlay) closeGuide();
+    });
+
+    // Utilitare matematice
+    function bisect(fn, a, b, eps = 1e-7, maxIter = 50) {
+      let fa = fn(a), fb = fn(b);
+      if (!isFinite(fa) || !isFinite(fb) || fa * fb > 0) return null;
+      for (let i = 0; i < maxIter; i++) {
+        const m = (a + b) / 2, fm = fn(m);
+        if (!isFinite(fm)) return null;
+        if (Math.abs(fm) < eps) return m;
+        fa * fm < 0 ? (b = m, fb = fm) : (a = m, fa = fa);
+      }
+      return (a + b) / 2;
+    }
+    function unify(arr, tol = 1e-4) {
+      return Array.from(new Set(arr.map(v => Number(v.toFixed(6))).sort((a, b) => a - b))).filter((v, i, a) => i === 0 || Math.abs(v - a[i - 1]) > tol);
+    }
+    function preprocess(str) {
+      return str
+        .replace(/([0-9]+(?:\.[0-9]+)?)([a-zA-Z])/g, '$1*$2')
+        .replace(/([0-9]+(?:\.[0-9]+)?)\(/g, '$1*(')
+        .replace(/\)([0-9]+(?:\.[0-9]+)?)/g, ')*$1')
+        .replace(/[−–—]/g, '-');
+    }
+
+    function analyze() {
+      const raw = document.getElementById('functie').value.trim();
+      if (!raw) {
+        alert('Introduceți o funcție!');
+        return;
+      }
+      const src = preprocess(raw);
+      const xMin = parseFloat(document.getElementById('x_min').value),
+        xMax = parseFloat(document.getElementById('x_max').value);
+      if (isNaN(xMin) || isNaN(xMax) || xMin >= xMax) {
+        alert('Interval invalid.');
+        return;
+      }
+      try {
+        const e = math.parse(src), d1 = math.derivative(e, 'x'), d2 = math.derivative(d1, 'x');
+        const F = e.compile(), F1 = d1.compile(), F2 = d2.compile();
+        const N = Math.max(400, Math.min(5000, Math.round((xMax - xMin) * 200))), step = (xMax - xMin) / N;
+        const xs = Array.from({ length: N + 1 }, (_, i) => xMin + i * step);
+        function roots(fn) {
+          const r = [], eps = 1e-7;
+          for (let i = 1; i < xs.length; i++) {
+            const a = xs[i - 1], b = xs[i], fa = fn(a), fb = fn(b);
+            if (!isFinite(fa) || !isFinite(fb)) continue;
+            if (Math.abs(fa) < eps) { r.push(a); continue; }
+            if (fa * fb <= 0) {
+              const ro = bisect(fn, a, b);
+              if (ro !== null) r.push(ro);
+            }
+          }
+          return r;
+        }
+        const zF = unify(roots(x => F.evaluate({ x }))),
+          zF1 = unify(roots(x => F1.evaluate({ x }))),
+          zF2 = unify(roots(x => F2.evaluate({ x })));
+        const Z = [-Infinity, ...unify([...zF, ...zF1, ...zF2]), Infinity];
+        const signOf = v => !isFinite(v) ? '∞' : Math.abs(v) < 1e-9 ? '0' : v > 0 ? '+' : '−';
+        function signs(fn) {
+          return Z.slice(0, -1).map((a, i) => {
+            const b = Z[i + 1];
+            let xt = a === -Infinity ? Z[1] - 1 : b === Infinity ? Z[Z.length - 2] + 1 : (a + b) / 2;
+            let tries = 0, val;
+            while (tries < 5) {
+              val = fn.evaluate({ x: xt });
+              if (isFinite(val)) break;
+              xt = (xt + a) / 2; tries++;
+            }
+            return signOf(val);
+          });
+        }
+        const sF = signs(F), sF1 = signs(F1), sF2 = signs(F2);
+        document.getElementById('puncte').innerHTML = `<strong>Puncte caracteristice</strong><br>f(x)=0: ${zF.map(v => v.toFixed(4)).join(', ') || '—'}<br>f′(x)=0: ${zF1.map(v => v.toFixed(4)).join(', ') || '—'}<br>f″(x)=0: ${zF2.map(v => v.toFixed(4)).join(', ') || '—'}`;
+        let tbl = '<table><tr><th>Funcție</th>';
+        Z.slice(0, -1).forEach((a, i) => {
+          const b = Z[i + 1];
+          const lbl = `${a === -Infinity ? '(-∞' : '[' + a.toFixed(3)} , ${b === Infinity ? '+∞)' : b.toFixed(3) + ']'}`;
+          tbl += `<th>${lbl}</th>`;
+        });
+        tbl += '</tr>';
+        tbl += `<tr><td>f(x)</td>${sF.map(s => `<td>${s}</td>`).join('')}</tr>`;
+        tbl += `<tr class="row-f1"><td>f′(x)</td>${sF1.map(s => `<td>${s}</td>`).join('')}</tr>`;
+        tbl += `<tr class="row-f2"><td>f″(x)</td>${sF2.map(s => `<td>${s}</td>`).join('')}</tr>`;
+        tbl += '</table>';
+        document.getElementById('tabel-semne').innerHTML = tbl;
+        const cleanTex = t => t.replace(/\\sim/g, '');
+        calcL.setExpressions([]); calcR.setExpressions([]);
+        calcL.setExpression({ id: 'f', latex: `f(x) = ${cleanTex(e.toTex())}`, color: Desmos.Colors.BLUE });
+        calcR.setExpression({ id: 'f1', latex: `f_1(x) = ${cleanTex(d1.toTex())}`, color: Desmos.Colors.RED });
+        calcR.setExpression({ id: 'f2', latex: `f_2(x) = ${cleanTex(d2.toTex())}`, color: Desmos.Colors.GREEN });
+      } catch (err) {
+        console.error(err);
+        alert('Eroare la procesare. Verificați sintaxa funcției.');
+      }
+    }
+    analyzeBtn.addEventListener('click', analyze);
+    document.getElementById('functie').addEventListener('keypress', e => { if (e.key === 'Enter') analyze(); });
+    window.onload = () => { analyze(); handleScroll(); };
+  </script>
+</body>
+</html>

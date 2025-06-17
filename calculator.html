@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <title>Analiză f(x) și derivate – versiune colorată</title>
+
+  <!-- biblioteci -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+  <script src="https://www.desmos.com/api/v1.11/calculator.js?apiKey=dcb31709b452b1cf9dc26972add0fda6"></script>
+
+  <style>
+    body { font-family: Arial; margin: 30px; background:#f7f7f7; }
+    input, button { padding:8px; font-size:16px; margin-top:10px; }
+    .input-group { margin-top:10px; }
+    .input-group label { display:block; margin-bottom:5px; }
+    table { border-collapse:collapse; width:100%; margin-top:20px; background:#fff; }
+    th, td { border:1px solid #ccc; padding:10px; text-align:center; }
+    /* culoare rânduri */
+    .row-f1 td { color:#d62728; }     /* roșu pentru derivata I */
+    .row-f2 td { color:#2ca02c; }     /* verde pentru derivata II */
+    #puncte { margin-top:20px; font-size:16px; line-height:1.6; }
+    /* calculatoare */
+    #calculators { display:flex; flex-direction:column; gap:20px; margin-top:30px; }
+    .calc-container { flex:1; display:flex; flex-direction:column; }
+    .calc-container h3 { text-align:center; margin-bottom:5px; }
+    .legend { text-align:center; font-size:14px; margin-bottom:10px; }
+    #calculator-left, #calculator-right { width:100%; height:500px; border:1px solid #ccc; }
+    @media(min-width:800px) { #calculators { flex-direction:row; } }
+  </style>
+</head>
+
+<body>
+  <h2>Analiză f(x) și derivate</h2>
+
+  <div class="input-group">
+    <label for="functie">Funcția (ex.: <code>3x^2 - 4x + 1</code>):</label>
+    <input id="functie" type="text" value="3x^2-4x+1" size="30">
+  </div>
+  <div class="input-group">
+    <label>Interval de analiză [X min, X max]:</label>
+    <input id="x_min" type="number" value="-10" style="width:80px;"> 
+    <input id="x_max" type="number" value="10"  style="width:80px;">
+  </div>
+  <button onclick="analizeaza()">Afișează</button>
+
+  <div id="puncte"></div>
+  <div id="tabel-semne"></div>
+
+  <div id="calculators">
+    <div class="calc-container">
+      <h3>Funcția originală</h3>
+      <div id="calculator-left"></div>
+    </div>
+    <div class="calc-container">
+      <h3>Derivatele de ordin I <span style="color:#d62728;">(roșu)</span> și II <span style="color:#2ca02c;">(verde)</span></h3>
+      <div id="calculator-right"></div>
+    </div>
+  </div>
+
+  <script>
+    /* Utilitare numerice & preprocess */
+    function bisect(fn,a,b,eps=1e-7,maxIter=50){ let fa=fn(a), fb=fn(b); if(!isFinite(fa)||!isFinite(fb)||fa*fb>0) return null; for(let i=0;i<maxIter;i++){ const m=(a+b)/2, fm=fn(m); if(!isFinite(fm)) return null; if(Math.abs(fm)<eps) return m; if(fa*fm<0){b=m;fb=fm;}else{a=m;fa=fm;}} return (a+b)/2; }
+    function unify(arr,tol=1e-4){ return Array.from(new Set(arr.map(v=>Number(v.toFixed(6))).sort((a,b)=>a-b))).filter((v,i,a)=>i===0||Math.abs(v-a[i-1])>tol); }
+    function preprocess(str){ return str.replace(/([0-9]+(?:\.[0-9]+)?)([a-zA-Z])/g,'$1*$2').replace(/([0-9]+(?:\.[0-9]+)?)\(/g,'$1*(').replace(/\)([0-9]+(?:\.[0-9]+)?)/g,')*$1').replace(/[−–—]/g,'-'); }
+
+    const calcL = Desmos.GraphingCalculator(document.getElementById('calculator-left'),{expressions:false,settingsMenu:false,keypad:false});
+    const calcR = Desmos.GraphingCalculator(document.getElementById('calculator-right'),{expressions:false,settingsMenu:false,keypad:false});
+
+    function analizeaza(){
+      const raw = document.getElementById('functie').value.trim(); if(!raw){alert('Introduceți o funcție!');return;} const src=preprocess(raw);
+      const xMin=parseFloat(document.getElementById('x_min').value), xMax=parseFloat(document.getElementById('x_max').value);
+      if(isNaN(xMin)||isNaN(xMax)||xMin>=xMax){alert('Interval invalid.');return;}
+      try{
+        const e=math.parse(src), d1=math.derivative(e,'x'), d2=math.derivative(d1,'x');
+        const F=e.compile(),F1=d1.compile(),F2=d2.compile();
+        const N=Math.max(400,Math.min(5000,Math.round((xMax-xMin)*200))); const step=(xMax-xMin)/N;
+        const xs=[];for(let i=0;i<=N;i++)xs.push(xMin+i*step);
+        function roots(fn){ const r=[]; const eps=1e-7; for(let i=1;i<xs.length;i++){ const a=xs[i-1],b=xs[i],fa=fn(a),fb=fn(b); if(!isFinite(fa)||!isFinite(fb))continue; if(Math.abs(fa)<eps){r.push(a);continue;} if(fa*fb<=0){const ro=bisect(fn,a,b);if(ro!==null)r.push(ro);} } return r; }
+        const zF=unify(roots(x=>F.evaluate({x}))), zF1=unify(roots(x=>F1.evaluate({x}))), zF2=unify(roots(x=>F2.evaluate({x}))); 
+        const Z=[-Infinity,...unify([...zF,...zF1,...zF2]),Infinity];
+        const signOf=v=>!isFinite(v)?'∞':Math.abs(v)<1e-9?'0':v>0?'+':'−';
+        function signs(fn){ return Z.slice(0,-1).map((a,i)=>{ const b=Z[i+1]; let xt=a===-Infinity?Z[1]-1:b===Infinity?Z[Z.length-2]+1:(a+b)/2; let tries=0;let val; while(tries<5){ val=fn.evaluate({x:xt}); if(isFinite(val))break; xt=(xt+a)/2;tries++; } return signOf(val); }); }
+        const sF=signs(F),sF1=signs(F1),sF2=signs(F2);
+        document.getElementById('puncte').innerHTML=`<strong>Puncte critice</strong><br>f(x)=0: ${zF.map(v=>v.toFixed(4)).join(', ')||'—'}<br>f′(x)=0: ${zF1.map(v=>v.toFixed(4)).join(', ')||'—'}<br>f″(x)=0: ${zF2.map(v=>v.toFixed(4)).join(', ')||'—'}`;
+        let tbl='<table><tr><th>Funcție</th>';
+        Z.slice(0,-1).forEach((a,i)=>{ const b=Z[i+1]; const lbl=`${a===-Infinity?'(-∞':'['+a.toFixed(3)} , ${b===Infinity?'+∞)':b.toFixed(3)+']'}`; tbl+=`<th>${lbl}</th>`;}); tbl+='</tr>';
+        tbl+=`<tr><td>f(x)</td>${sF.map(s=>`<td>${s}</td>`).join('')}</tr>`;
+        tbl+=`<tr class="row-f1"><td>f′(x)</td>${sF1.map(s=>`<td>${s}</td>`).join('')}</tr>`;
+        tbl+=`<tr class="row-f2"><td>f″(x)</td>${sF2.map(s=>`<td>${s}</td>`).join('')}</tr>`;
+        tbl+='</table>'; document.getElementById('tabel-semne').innerHTML=tbl;
+        const cleanTex=t=>t.replace(/\\sim/g,'');
+        calcL.setExpressions([]); calcR.setExpressions([]);
+        calcL.setExpression({id:'f',latex:`f(x) = ${cleanTex(e.toTex())}`,color:Desmos.Colors.BLUE});
+        calcR.setExpression({id:'f1',latex:`f_1(x) = ${cleanTex(d1.toTex())}`,color:Desmos.Colors.RED});
+        calcR.setExpression({id:'f2',latex:`f_2(x) = ${cleanTex(d2.toTex())}`,color:Desmos.Colors.GREEN});
+      }catch(err){console.error(err);alert('Eroare la procesare. Verifică sintaxa.');}
+    }
+    window.onload=analizeaza;
+  </script>
+</body>
+</html>
